@@ -3,57 +3,49 @@
 local utils = require 'lualine.utils.utils'
 local highlight = require 'lualine.highlight'
 
-local SignifyDiff = require('lualine.component'):new()
+local M = require('lualine.component'):extend()
 
-SignifyDiff.default_colors = {
-  added = '#f0e130',
-  removed = '#90ee90',
-  modified = '#ff0038'
+local default_options = {
+  colored = true,
+  symbols = { added = '+', modified = '!', removed = '-' },
+  diff_color = {
+    added = {
+      fg = utils.extract_highlight_colors('SignifySignAdd', 'fg') or '#90ee90',
+    },
+    modified = {
+      fg = utils.extract_highlight_colors('SignifySignChange', 'fg') or '#f0e130',
+    },
+    removed = {
+      fg = utils.extract_highlight_colors('SignifySignDelete', 'fg') or '#ff0038',
+    },
+  },
 }
 
-SignifyDiff.new = function(self, options, child)
-  local new_instance = self._parent:new(options, child or SignifyDiff)
-  local default_symbols = {added = '+', modified = '!', removed = '-'}
-  new_instance.options.symbols =
-    vim.tbl_extend('force', default_symbols, new_instance.options.symbols or {})
-  if new_instance.options.colored == nil then
-    new_instance.options.colored = true
-  end
-  if not new_instance.options.color_added then
-    new_instance.options.color_added =
-      utils.extract_highlight_colors('DiffAdd', 'fg')
-      or SignifyDiff.default_colors.added
-  end
-  if not new_instance.options.color_modified then
-    new_instance.options.color_modified =
-      utils.extract_highlight_colors('DiffChange', 'fg')
-      or SignifyDiff.default_colors.modified
-  end
-  if not new_instance.options.color_removed then
-    new_instance.options.color_removed =
-      utils.extract_highlight_colors('DiffDelete', 'fg')
-      or SignifyDiff.default_colors.removed
-  end
-
-  if new_instance.options.colored then
-    new_instance.highlights = {
+function M:init(options)
+  M.super.init(self, options)
+  self.options = vim.tbl_deep_extend('keep', self.options or {}, default_options)
+  if self.options.colored then
+    self.highlights = {
       added = highlight.create_component_highlight_group(
-          {fg = new_instance.options.color_added}, 'diff_added',
-          new_instance.options),
+        self.options.diff_color.added,
+        'diff_added',
+        self.options
+      ),
       modified = highlight.create_component_highlight_group(
-          {fg = new_instance.options.color_modified}, 'diff_modified',
-          new_instance.options),
+        self.options.diff_color.modified,
+        'diff_modified',
+        self.options
+      ),
       removed = highlight.create_component_highlight_group(
-          {fg = new_instance.options.color_removed}, 'diff_removed',
-          new_instance.options)
+        self.options.diff_color.removed,
+        'diff_removed',
+        self.options
+      ),
     }
   end
-
-  return new_instance
 end
 
-SignifyDiff.update_status = function(self)
-
+function M:update_status()
   local colors = {}
   if self.options.colored then
     for name, highlight_name in pairs(self.highlights) do
@@ -73,7 +65,7 @@ SignifyDiff.update_status = function(self)
     if self.options.colored then
       table.insert(result, colors[name] .. self.options.symbols[name] .. diff[i])
     else
-      table.insert(result, self.options.symbols[name] .. SignifyDiff.diff[i])
+      table.insert(result, self.options.symbols[name] .. M.diff[i])
     end
     ::continue::
   end
@@ -85,4 +77,4 @@ SignifyDiff.update_status = function(self)
   end
 end
 
-return SignifyDiff
+return M
